@@ -4,6 +4,7 @@ import java.sql.*;
 import java.sql.Connection;
 
 import java.util.HashMap;
+import Abitur.Queue;
 
 public class MySQLConnection {
     private final Connection connection;
@@ -32,7 +33,17 @@ public class MySQLConnection {
         statement.clearParameters();
 
         int columnCount = queryResult.getMetaData().getColumnCount();
-        int rowCount = queryResult.getMetaData().getColumnCount();
+
+        int rowCount = 0;
+        Queue<String[]> results = new Queue<>();
+        while (queryResult.next()) {
+            rowCount++;
+            String[] row = new String[columnCount];
+            for (int i = 0; i < columnCount; i++) {
+                row[i] = queryResult.getString(i + 1);
+            }
+            results.enqueue(row);
+        }
 
         String[] columnNames = new String[columnCount];
         String[] columnTypes = new String[columnCount];
@@ -45,10 +56,8 @@ public class MySQLConnection {
         String[][] rowData = new String[rowCount][columnCount];
 
         for (int i = 0; i < rowCount; i++) {
-            queryResult.next();
-            for (int j = 0; j < columnCount; j++) {
-                rowData[i][j] = queryResult.getString(j + 1);
-            }
+            rowData[i] = results.front();
+            results.dequeue();
         }
 
         return new QueryResult(rowData, columnNames, columnTypes);
