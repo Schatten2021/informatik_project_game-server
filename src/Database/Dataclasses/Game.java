@@ -41,6 +41,5 @@ public class Game {
         this.player2FinishedTurns = Integer.parseInt(data[9]);
         this.finished = Boolean.parseBoolean(data[10]);
         this.result = Integer.parseInt(data[11]);
-
     }
 }

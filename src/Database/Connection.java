@@ -14,7 +14,8 @@ public class Connection {
         this.connection.prepareStatement("register", "INSERT INTO player VALUES(NULL,?,100,100,?, FALSE, DEFAULT, DEFAULT);");
         this.connection.prepareStatement("newGame", "INSERT INTO game VALUES(NULL, DEFAULT, ?, ?, ?, DEFAULT, ?, ?, ?, DEFAULT, DEFAULT, DEFAULT);");
         this.connection.prepareStatement("inGame", "UPDATE player SET InGame=? WHERE id=?");
-        this.connection.prepareStatement("playerRunningGames", "SELECT * FROM player, game WHERE (player1ID=player.id OR player2ID=player.id) AND NOT game.finished");
+        this.connection.prepareStatement("getRunningGames", "SELECT game.* FROM player, game WHERE (player1ID=player.id OR player2ID=player.id) AND NOT game.finished AND player.id=?;");
+        this.connection.prepareStatement("getPlayer", "SELECT * FROM player WHERE id=?");
     }
     public Player login(String username, String password) throws SQLException {
         QueryResult loginResult = this.connection.runPreparedStatement("login", username, password);
@@ -35,10 +36,17 @@ public class Connection {
         player2.inGame = true;
     }
     public Game getRunningGame(Player player) throws SQLException {
-        QueryResult games = this.connection.runPreparedStatement("getRunningGames", player);
+        QueryResult games = this.connection.runPreparedStatement("getRunningGames", player.id);
         if (games == null || games.getRowCount() < 1) {
             return null;
         }
         return new Game(games.getData()[0]);
+    }
+    public Player getPlayer(int id) throws SQLException {
+        QueryResult result = this.connection.runPreparedStatement("getPlayer", id);
+        if (result.getRowCount() != 1) {
+            return null;
+        }
+        return new Player(result.getData()[0]);
     }
 }

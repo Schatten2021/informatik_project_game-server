@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 import Abitur.Queue;
+import Database.Dataclasses.Game;
 import Database.Dataclasses.Player;
 import Network.Connection;
 import Network.Packets.Downstream.GameStart;
@@ -102,12 +103,41 @@ public class Server {
             if (!player.inGame) {
                 this.availablePlayers.enqueue(connection);
                 this.logger.info("Player \"" + player.name + "\" now waiting for a game.");
+            } else {
+                this.playerReenterGame(connection);
             }
-        } catch (SQLException e) {
+        } catch (SQLException | IOException e) {
             connection.markForDeletion();
             String msg = String.format("Login failed on connection %s with username \"%s\" because of \"%s\"", connection, packet.username, e.getMessage());
             logger.error(msg);
         }
+    }
+    private void playerReenterGame(Connection connection) throws SQLException, IOException {
+        Player player = connection.player;
+        Game game = this.db.getRunningGame(player);
+        Player other;
+        if (player.id == game.player1ID) {
+            other = this.db.getPlayer(game.player2ID);
+            if (other == null) {
+                String msg = String.format("Game (\"%d\") has an invalid player2ID!", game.id);
+                this.logger.fatal(msg);
+                connection.markForDeletion();
+                return;
+            }
+            connection.send(new GameStart(other.name, game.player1HP, game.player1MP));
+        } else {
+            other = this.db.getPlayer(game.player1ID);
+            if (other == null) {
+                String msg = String.format("Game (\"%d\") has an invalid player1ID!", game.id);
+                this.logger.fatal(msg);
+                connection.markForDeletion();
+                return;
+            }
+            connection.send(new GameStart(other.name, game.player2HP, game.player2MP));
+        }
+        String msg = String.format("Player \"%s\" has continued playing", player.name);
+        this.logger.info(msg);
+
     }
     private void handleError(Error packet, Connection connection) {
         connection.markForDeletion();
