@@ -1,5 +1,9 @@
 package Database.Dataclasses;
 
+import logging.Logger;
+
+import java.util.Arrays;
+
 public class Player {
     public final int id;
     public final String name;
@@ -11,6 +15,8 @@ public class Player {
     public final float defaultMP;
     public final float regenHP;
     public final float regenMP;
+
+    private final Logger logger = new Logger("Database.Dataclasses.Player");
 
     public Game currentGame;
 
@@ -27,12 +33,13 @@ public class Player {
         this.regenMP = regenMP;
     }
     public Player(String[] dbData) {
+        this.logger.debug("loading from data " + Arrays.toString(dbData));
         this.id = Integer.parseInt(dbData[0]);
         this.name = dbData[1];
         this.maxHP = Float.parseFloat(dbData[2]);
         this.maxMP = Float.parseFloat(dbData[3]);
         this.password = dbData[4];
-        this.inGame = Boolean.parseBoolean(dbData[5]);
+        this.inGame = Integer.parseInt(dbData[5]) > 0;
         this.defaultHP = Float.parseFloat(dbData[6]);
         this.defaultMP = Float.parseFloat(dbData[7]);
         this.regenHP = Float.parseFloat(dbData[8]);

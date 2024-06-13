@@ -98,11 +98,11 @@ public class Server {
                 return;
             }
             connection.player = player;
+            this.logger.debug("Logged in player \"" + player.name + "\" in game: " + player.inGame);
             if (!player.inGame) {
                 this.availablePlayers.enqueue(connection);
                 this.logger.info("Player \"" + player.name + "\" now waiting for a game.");
             }
-            this.logger.debug("Logged in player " + player.name);
         } catch (SQLException e) {
             connection.markForDeletion();
             String msg = String.format("Login failed on connection %s with username \"%s\" because of \"%s\"", connection, packet.username, e.getMessage());
@@ -122,6 +122,7 @@ public class Server {
     }
     private void checkNewGames() {
         while (!this.availablePlayers.isEmpty()) {
+            // get first player
             Connection connection1 = this.availablePlayers.front();
             Player player1 = connection1.player;
             this.availablePlayers.dequeue();
@@ -130,9 +131,13 @@ public class Server {
                 this.availablePlayers.enqueue(connection1);
                 break;
             }
+
+            // get second player
             Connection connection2 = this.availablePlayers.front();
             Player player2 = connection2.player;
             this.availablePlayers.dequeue();
+
+            // add the game in the database
             try {
                 this.db.newGame(player1, player2);
             } catch (SQLException e) {
@@ -141,6 +146,8 @@ public class Server {
                 connection1.markForDeletion();
                 connection2.markForDeletion();
             }
+
+            // tell the players that they are in a game
             try {
                 connection1.send(new GameStart(connection2.player.name, player1.defaultHP, player1.defaultMP));
                 connection2.send(new GameStart(connection1.player.name, player2.defaultHP, player2.defaultMP));
@@ -158,6 +165,7 @@ public class Server {
         Queue<Connection> previouslyWaitingConnections = new Queue<>();
         while (!this.availablePlayers.isEmpty()) {
             previouslyWaitingConnections.enqueue(this.availablePlayers.front());
+            this.availablePlayers.dequeue();
         }
         while (!previouslyWaitingConnections.isEmpty()) {
             Connection connection = previouslyWaitingConnections.front();
