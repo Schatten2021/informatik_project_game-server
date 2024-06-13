@@ -1,6 +1,7 @@
 package Network;
 
 import Abitur.Queue;
+import Database.Dataclasses.Player;
 import Network.Packets.Heartbeat;
 import Network.Packets.Packet;
 import Network.Packets.Error;
@@ -22,7 +23,7 @@ public class Connection {
     private final Logger logger;
     private long lastHeartbeat = 0;
     private boolean delete = false;
-    public int playerID = -1;
+    public Player player;
 
     public Connection(Socket socket) throws IOException {
         this.socket = socket;
@@ -71,6 +72,9 @@ public class Connection {
         } catch (IOException e) {
             this.logger.error(e.getMessage());
         }
+    }
+    public boolean isDeleted() {
+        return this.delete || this.socket.isClosed();
     }
     public void markForDeletion() {
         this.delete = true;

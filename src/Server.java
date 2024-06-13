@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import Abitur.Queue;
 import Database.Dataclasses.Player;
 import Network.Connection;
+import Network.Packets.Downstream.GameStart;
 import Network.Packets.Error;
 import Network.Packets.Heartbeat;
 import Network.Packets.Packet;
@@ -19,11 +20,17 @@ public class Server {
     private final Logger logger = new Logger("Server");
     private Thread thread;
 
+    private final Queue<Connection> availablePlayers = new Queue<>();
+
     public Server(int programPort, String dataBaseHost, int dbPort, String dbUser, String dbPassword, String dbName) throws IOException, SQLException {
         this.connectionHost = new Network.ConnectionHost(programPort);
         this.db = new Database.Connection(dataBaseHost, dbPort, dbUser, dbPassword, dbName);
     }
     public void start() {
+        if (thread != null) {
+            this.logger.warn("Already started");
+            return;
+        }
         this.connectionHost.start();
         this.thread = new Thread(this::readThread);
         this.thread.start();
@@ -31,11 +38,15 @@ public class Server {
     public void stop() {
         this.thread.interrupt();
         this.connectionHost.stop();
+        while (!this.availablePlayers.isEmpty())
+            this.availablePlayers.dequeue();
     }
     private void readThread() {
         while (this.connectionHost.isAlive() && !this.thread.isInterrupted()) {
             this.connectionHost.updateConnection();
             this.handleIncomingData();
+            this.checkWaitingConnections();
+            this.checkNewGames();
             this.handleOutgoingData();
         }
         logger.info("exiting readThread");
@@ -67,8 +78,10 @@ public class Server {
         try {
             this.db.register(packet.username.value, packet.password.value);
             Player player = this.db.login(packet.username.value, packet.password.value);
-            connection.playerID = player.id;
+            connection.player = player;
+            this.availablePlayers.enqueue(connection);
             this.logger.info("Registered player " + player.name);
+            this.logger.info("Player + \"" + player.name + "\" now waiting for a game.");
         } catch (SQLException e) {
             String msg = String.format("Registration failed on connection %s with username \"%s\" because of \"%s\"", connection, packet.username.value, e.getMessage());
             this.logger.error(msg);
@@ -84,7 +97,11 @@ public class Server {
                 connection.markForDeletion();
                 return;
             }
-            connection.playerID = player.id;
+            connection.player = player;
+            if (!player.inGame) {
+                this.availablePlayers.enqueue(connection);
+                this.logger.info("Player \"" + player.name + "\" now waiting for a game.");
+            }
             this.logger.debug("Logged in player " + player.name);
         } catch (SQLException e) {
             connection.markForDeletion();
@@ -99,7 +116,58 @@ public class Server {
     private void handleOutgoingData() {
         Queue<Connection> connections = this.connectionHost.getConnections();
         while (!connections.isEmpty()) {
+            Connection connection = connections.front();
             connections.dequeue();
+        }
+    }
+    private void checkNewGames() {
+        while (!this.availablePlayers.isEmpty()) {
+            Connection connection1 = this.availablePlayers.front();
+            Player player1 = connection1.player;
+            this.availablePlayers.dequeue();
+            // only one player in queue
+            if (this.availablePlayers.isEmpty()) {
+                this.availablePlayers.enqueue(connection1);
+                break;
+            }
+            Connection connection2 = this.availablePlayers.front();
+            Player player2 = connection2.player;
+            this.availablePlayers.dequeue();
+            try {
+                this.db.newGame(player1, player2);
+            } catch (SQLException e) {
+                String msg = String.format("Couldn't pair player \"%s\" to player \"%s\" because of SQLException \"%s\".", player1.name, player2.name, e.getMessage());
+                this.logger.error(msg);
+                connection1.markForDeletion();
+                connection2.markForDeletion();
+            }
+            try {
+                connection1.send(new GameStart(connection2.player.name, player1.defaultHP, player1.defaultMP));
+                connection2.send(new GameStart(connection1.player.name, player2.defaultHP, player2.defaultMP));
+                String msg = String.format("Player \"%s\" now playing against \"%s\".", player1.name, player2.name);
+                this.logger.info(msg);
+            } catch (IOException e) {
+                String msg = String.format("Couldn't pair player \"%s\" to player \"%s\" because of IOException \"%s\".", player1.name, player2.name, e.getMessage());
+                this.logger.error(msg);
+                connection1.markForDeletion();
+                connection2.markForDeletion();
+            }
+        }
+    }
+    private void checkWaitingConnections() {
+        Queue<Connection> previouslyWaitingConnections = new Queue<>();
+        while (!this.availablePlayers.isEmpty()) {
+            previouslyWaitingConnections.enqueue(this.availablePlayers.front());
+        }
+        while (!previouslyWaitingConnections.isEmpty()) {
+            Connection connection = previouslyWaitingConnections.front();
+            previouslyWaitingConnections.dequeue();
+            if (!connection.isDeleted()) {
+                this.availablePlayers.enqueue(connection);
+                continue;
+            }
+            String msg = String.format("Player \"%s\" now stopped waiting for a connection due to a disconnect.", connection.player);
+            this.logger.info(msg);
         }
     }
 }
