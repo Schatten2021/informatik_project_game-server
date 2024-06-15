@@ -115,26 +115,7 @@ public class Server {
     private void playerReenterGame(Connection connection) throws SQLException, IOException {
         Player player = connection.player;
         Game game = this.db.getRunningGame(player);
-        Player other;
-        if (player.id == game.player1ID) {
-            other = this.db.getPlayer(game.player2ID);
-            if (other == null) {
-                String msg = String.format("Game (\"%d\") has an invalid player2ID!", game.id);
-                this.logger.fatal(msg);
-                connection.markForDeletion();
-                return;
-            }
-            connection.send(new GameStart(other.name, game.player1HP, game.player1MP));
-        } else {
-            other = this.db.getPlayer(game.player1ID);
-            if (other == null) {
-                String msg = String.format("Game (\"%d\") has an invalid player1ID!", game.id);
-                this.logger.fatal(msg);
-                connection.markForDeletion();
-                return;
-            }
-            connection.send(new GameStart(other.name, game.player2HP, game.player2MP));
-        }
+        this.sendGame(connection, game);
         String msg = String.format("Player \"%s\" has continued playing", player.name);
         this.logger.info(msg);
 
@@ -175,12 +156,20 @@ public class Server {
                 this.logger.error(msg);
                 connection1.markForDeletion();
                 connection2.markForDeletion();
+                return;
+            }
+            Game game;
+            try {
+                game = this.db.getRunningGame(player1);
+            } catch (SQLException e) {
+                this.logger.fatal("Game not registered (" + e.getMessage() + ")");
+                return;
             }
 
             // tell the players that they are in a game
             try {
-                connection1.send(new GameStart(connection2.player.name, player1.defaultHP, player1.defaultMP));
-                connection2.send(new GameStart(connection1.player.name, player2.defaultHP, player2.defaultMP));
+                this.sendGame(connection1, game);
+                this.sendGame(connection2, game);
                 String msg = String.format("Player \"%s\" now playing against \"%s\".", player1.name, player2.name);
                 this.logger.info(msg);
             } catch (IOException e) {
@@ -190,6 +179,26 @@ public class Server {
                 connection2.markForDeletion();
             }
         }
+    }
+    private void sendGame(Connection connection, Game game) throws IOException {
+        Player player = connection.player;
+        Player other;
+        if (player.id == game.player1ID) {
+            other = game.player2;
+        } else {
+            other = game.player1;
+        }
+        connection.send(new GameStart(
+                player.defaultHP,
+                player.regenHP,
+                player.defaultMP,
+                player.regenMP,
+                other.name,
+                other.defaultHP,
+                other.regenHP,
+                other.defaultMP,
+                other.regenMP
+        ));
     }
     private void checkWaitingConnections() {
         Queue<Connection> previouslyWaitingConnections = new Queue<>();

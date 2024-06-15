@@ -11,7 +11,7 @@ public class Connection {
     public Connection(String host, int port, String username, String password, String databaseName) throws SQLException {
         this.connection = new MySQLConnection(host, port, databaseName, username, password);
         this.connection.prepareStatement("login", "SELECT * FROM player WHERE name=? AND password=?;");
-        this.connection.prepareStatement("register", "INSERT INTO player VALUES(NULL,?,100,100,?, FALSE, DEFAULT, DEFAULT);");
+        this.connection.prepareStatement("register", "INSERT INTO player VALUES(DEFAULT, ?, DEFAULT, DEFAULT, ?, FALSE, DEFAULT, DEFAULT);");
         this.connection.prepareStatement("newGame", "INSERT INTO game VALUES(NULL, DEFAULT, ?, ?, ?, DEFAULT, ?, ?, ?, DEFAULT, DEFAULT, DEFAULT);");
         this.connection.prepareStatement("inGame", "UPDATE player SET InGame=? WHERE id=?");
         this.connection.prepareStatement("getRunningGames", "SELECT game.* FROM player, game WHERE (player1ID=player.id OR player2ID=player.id) AND NOT game.finished AND player.id=?;");
@@ -40,7 +40,11 @@ public class Connection {
         if (games == null || games.getRowCount() < 1) {
             return null;
         }
-        return new Game(games.getData()[0]);
+        int player1Id = Integer.parseInt(games.getData()[0][2]);
+        int player2Id = Integer.parseInt(games.getData()[0][6]);
+        Player player1 = this.getPlayer(player1Id);
+        Player player2 = this.getPlayer(player2Id);
+        return new Game(games.getData()[0], player1, player2);
     }
     public Player getPlayer(int id) throws SQLException {
         QueryResult result = this.connection.runPreparedStatement("getPlayer", id);
