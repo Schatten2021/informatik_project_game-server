@@ -1,10 +1,9 @@
 package Database;
 
-import java.sql.*;
-import java.sql.Connection;
-
-import java.util.HashMap;
 import Abitur.Queue;
+
+import java.sql.*;
+import java.util.HashMap;
 
 public class MySQLConnection {
     private final Connection connection;

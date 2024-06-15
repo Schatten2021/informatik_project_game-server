@@ -1,7 +1,7 @@
 package Network;
 
 import Abitur.Queue;
-import Database.Dataclasses.Player;
+import Database.Types.Player;
 import Network.Packets.Heartbeat;
 import Network.Packets.Packet;
 import Network.Packets.Error;
