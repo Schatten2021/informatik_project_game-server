@@ -141,10 +141,20 @@ public class DataBase {
             throw new SQLException();
         }
         game.abilitiesUsed.append(AbilityUsed.load(data[0], this));
+        if (player1) {
+            game.player1MP -= ability.cost;
+        } else {
+            game.player2MP -= ability.cost;
+        }
+        this.updateDB(game);
     }
     public void newRound(Game game) throws SQLException {
-        this.connection.runPreparedStatement("newRound", game.id);
+        game.player1HP += game.player1HPRegen;
+        game.player1MP += game.player1MPRegen;
+        game.player2HP += game.player2HPRegen;
+        game.player2MP += game.player2MPRegen;
         game.round++;
+        this.updateDB(game);
     }
     public void playerFinishedRound(Player player) throws SQLException {
         player.currentGame = player.currentGame.getUpdated(this);
