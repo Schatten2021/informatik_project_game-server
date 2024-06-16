@@ -43,7 +43,6 @@ public class Connection {
         }
         while (this.in.available() > 0) {
             byte id = this.in.readNBytes(1)[0];
-            //TODO: fix
             Packet result;
             switch (id) {
                 case Heartbeat.id:
