@@ -21,7 +21,7 @@ public class DataBase {
         this.connection.prepareStatement("getAbilitiesUsedInGame", "SELECT * FROM abilitiesUsed WHERE gameId=?;");
         this.connection.prepareStatement("login", "SELECT * FROM player WHERE name=? AND password=?;");
         this.connection.prepareStatement("signUp", "INSERT INTO player VALUES (DEFAULT, ?, DEFAULT, DEFAULT, ?, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT)");
-        this.connection.prepareStatement("getRunningGamesForPlayer", "SELECT game.* FROM player, game WHERE (game.player1ID=player.id OR game.player2ID=player.id) AND player.id=?;");
+        this.connection.prepareStatement("getRunningGamesForPlayer", "SELECT game.* FROM player, game WHERE (game.player1ID=player.id OR game.player2ID=player.id) AND player.id=? AND game.finished=FALSE;");
         this.connection.prepareStatement("newGame", "INSERT INTO game VALUES (DEFAULT, DEFAULT, ?, ?, ?, ?, ?, DEFAULT, ?, ?, ?, ?, ?, DEFAULT, DEFAULT, DEFAULT);");
         this.connection.prepareStatement("getLastInsertedGame", "SELECT * FROM game WHERE id=(SELECT MAX(id) FROM game)");
         this.connection.prepareStatement("abilityUsed", "INSERT INTO abilitiesUsed VALUES (DEFAULT, ?, ?, ?, ?);");
