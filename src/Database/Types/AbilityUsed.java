@@ -4,6 +4,7 @@ import Database.DataBase;
 
 import java.sql.SQLException;
 import java.util.HashMap;
+import Abitur.Queue;
 
 public class AbilityUsed {
     private static final HashMap<Integer, AbilityUsed> instances = new HashMap<>();
@@ -22,7 +23,7 @@ public class AbilityUsed {
         this.abilityId = Integer.parseInt(data[2]);
         this.round = Integer.parseInt(data[3]);
         this.player1 = data[4].equals("1");
-        this.ability = db.getAbility(this.abilityId);
+        this.ability = Ability.load(this.abilityId, db);
     }
     public static AbilityUsed load(String[] data, DataBase db) throws SQLException {
         AbilityUsed abilityUsed = new AbilityUsed(data, db);
@@ -43,5 +44,14 @@ public class AbilityUsed {
                 this.gameId == other.gameId &&
                 this.round == other.round &&
                 this.ability.equals(other.ability);
+    }
+    public Queue<Effect> activeEffects(Game game) {
+        Queue<Effect> queue = new Abitur.Queue<>();
+        for (Effect effect : this.ability.effects) {
+            if ((effect.time + this.round) > game.round) {
+                queue.enqueue(effect);
+            }
+        }
+        return queue;
     }
 }

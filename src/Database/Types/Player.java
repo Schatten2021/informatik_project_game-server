@@ -3,7 +3,6 @@ package Database.Types;
 import Database.DataBase;
 import logging.Logger;
 
-import javax.xml.crypto.Data;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashMap;

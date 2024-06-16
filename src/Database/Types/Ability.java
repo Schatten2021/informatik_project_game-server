@@ -10,11 +10,13 @@ public class Ability {
 
     public final int id;
     public final String name;
+    public final float cost;
     public final Effect[] effects;
 
     private Ability(String[] data, DataBase db) throws SQLException {
         this.id = Integer.parseInt(data[0]);
         this.name = data[1];
+        this.cost = Float.parseFloat(data[2]);
         this.effects = db.getEffects(this);
     }
     public static Ability load(String[] data, DataBase db) throws SQLException {

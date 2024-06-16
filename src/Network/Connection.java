@@ -12,9 +12,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.Arrays;
 
 public class Connection {
-    private static final long heartbeatFrequency = 10;
+    private static final long heartbeatFrequency = 1000;
 
     private final Socket socket;
     public final Queue<Packet> incoming = new Queue<>();
@@ -29,9 +30,10 @@ public class Connection {
         this.socket = socket;
         this.in = this.socket.getInputStream();
         this.out = this.socket.getOutputStream();
-        this.logger = new Logger("Network.ConnectionHost.Connection" + socket.getRemoteSocketAddress().toString());
+        this.logger = new Logger("Network.Connection." + socket.getRemoteSocketAddress().toString());
     }
     public void send(Packet packet) throws IOException {
+        this.logger.debug("Sending packet " + packet + " to " + this);
         this.out.write(packet.toBytes());
     }
     public void update() throws IOException {
@@ -56,7 +58,8 @@ public class Connection {
             this.logger.debug("received packet " + result.getClass().getName());
         }
         long now = System.currentTimeMillis();
-        if (now - lastHeartbeat > heartbeatFrequency) {
+        if ((now - lastHeartbeat) > heartbeatFrequency) {
+//            this.logger.fdebug("between now (%d) and lastHeartbeat (%d) were %d milliseconds.", now, lastHeartbeat, now-lastHeartbeat);
             this.lastHeartbeat = now;
             this.send(new Heartbeat());
         }

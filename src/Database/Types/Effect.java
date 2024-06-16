@@ -15,6 +15,7 @@ public class Effect {
     public final float min;
     public final float max;
     public final boolean relative;
+    public final boolean hitSelf;
 
     private Effect(String[] data) {
         this.id = Integer.parseInt(data[0]);
@@ -24,6 +25,7 @@ public class Effect {
         this.min = Float.parseFloat(data[4]);
         this.max = Float.parseFloat(data[5]);
         this.relative = data[6].equals("1");
+        this.hitSelf = data[7].equals("1");
     }
     public static Effect load(String[] data) {
         Effect effect = new Effect(data);
@@ -47,5 +49,12 @@ public class Effect {
                 (this.min == other.min) &&
                 (this.max == other.max) &&
                 (this.relative == other.relative);
+    }
+    public float value() {
+        // generate a value between min and max
+        float value = (float) (Math.random() * (max - min) + min);
+        // round to 2 digits
+        double multiplier = Math.pow(10, 2);
+        return (float) ((float) Math.round(value * multiplier) / multiplier);
     }
 }
