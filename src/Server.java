@@ -75,15 +75,21 @@ public class Server {
         }
     }
     private void handlePacket(Packet packet, Connection connection) {
-        switch (packet) {
-            case SignUP signUP -> this.handleSignUp(signUP, connection);
-            case Login login -> this.handleLogin(login, connection);
-            case RoundFinished roundFinished -> this.handleRoundFinished(connection);
-            case Network.Packets.Upstream.AbilityUsed abilityUsed -> this.handleAbilityUsed(abilityUsed, connection);
-            case Heartbeat _ -> {}
-            case Error error -> this.handleError(error, connection);
-            case null -> logger.error("Got null packet from " + connection);
-            default -> logger.debug("Got unhandled packet: " + packet.getClass().getName() + " from connection: " + connection);
+        if (packet instanceof SignUP) {
+            this.handleSignUp((SignUP) packet, connection);
+        } else if (packet instanceof Login) {
+            this.handleLogin((Login) packet, connection);
+        } else if (packet instanceof RoundFinished) {
+            this.handleRoundFinished(connection);
+        } else if (packet instanceof Network.Packets.Upstream.AbilityUsed) {
+            this.handleAbilityUsed((Network.Packets.Upstream.AbilityUsed) packet, connection);
+        } else if (packet instanceof Heartbeat) {
+        } else if (packet instanceof Error) {
+            this.handleError((Error) packet, connection);
+        } else if (packet == null) {
+            logger.error("Got null packet from " + connection);
+        } else {
+            logger.fdebug("Got unhandled packet: %s from connection: %s", packet.getClass().getName(), connection);
         }
     }
 

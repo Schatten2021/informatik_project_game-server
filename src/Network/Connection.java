@@ -2,6 +2,7 @@ package Network;
 
 import Abitur.Queue;
 import Database.Types.Player;
+import Network.Packets.Downstream.RoundEnd;
 import Network.Packets.Heartbeat;
 import Network.Packets.Packet;
 import Network.Packets.Error;
@@ -42,15 +43,30 @@ public class Connection {
         }
         while (this.in.available() > 0) {
             byte id = this.in.readNBytes(1)[0];
-            Packet result = switch (id) {
-                case 0x00 -> Heartbeat.fromStream(this.in);
-                case 0x01 -> Login.fromStream(this.in);
-                case 0x02 -> AbilityUsed.fromStream(this.in);
-                case 0x03 -> RoundFinished.fromStream(this.in);
-                case 0x04 -> SignUP.fromStream(this.in);
-                case (byte) 0xFF -> Error.fromStream(this.in);
-                default -> throw new IOException("Invalid packet id " + id);
-            };
+            //TODO: fix
+            Packet result;
+            switch (id) {
+                case Heartbeat.id:
+                    result = Heartbeat.fromStream(this.in);
+                    break;
+                case Login.id:
+                    result = Login.fromStream(this.in);
+                    break;
+                case AbilityUsed.id:
+                    result = AbilityUsed.fromStream(this.in);
+                    break;
+                case RoundFinished.id:
+                    result = RoundFinished.fromStream(this.in);
+                    break;
+                case SignUP.id:
+                    result = SignUP.fromStream(this.in);
+                    break;
+                case Error.id:
+                    result = Error.fromStream(this.in);
+                    break;
+                default:
+                    throw new IOException("Invalid packet id " + id);
+            }
             if (result instanceof Heartbeat) {
                 continue;
             }
