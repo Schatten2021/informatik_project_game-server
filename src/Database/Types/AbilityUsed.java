@@ -14,6 +14,7 @@ public class AbilityUsed {
     public final int abilityId;
     public final int round;
     public final boolean player1;
+    public final float value;
 
     public final Ability ability;
 
@@ -23,6 +24,7 @@ public class AbilityUsed {
         this.abilityId = Integer.parseInt(data[2]);
         this.round = Integer.parseInt(data[3]);
         this.player1 = data[4].equals("1");
+        this.value = Float.parseFloat(data[5]);
         this.ability = Ability.load(this.abilityId, db);
     }
     public static AbilityUsed load(String[] data, DataBase db) throws SQLException {
@@ -32,12 +34,7 @@ public class AbilityUsed {
         }
         return instances.get(abilityUsed.id);
     }
-    public static AbilityUsed load(int id, DataBase db) throws SQLException {
-        return db.getAbilityUsed(id);
-    }
-    public AbilityUsed getUpdated(DataBase db) throws SQLException {
-        return load(this.id, db);
-    }
+
     public boolean equals(AbilityUsed other) {
         if (other == null) return false;
         return this.id == other.id &&

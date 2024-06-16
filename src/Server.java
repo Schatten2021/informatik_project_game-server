@@ -8,6 +8,7 @@ import Abitur.List;
 import Abitur.Queue;
 import Database.DataBase;
 import Database.Types.*;
+import Database.Types.AbilityUsed;
 import Network.Connection;
 import Network.Packets.Downstream.*;
 import Network.Packets.Error;
@@ -77,7 +78,7 @@ public class Server {
         switch (packet) {
             case SignUP signUP -> this.handleSignUp(signUP, connection);
             case Login login -> this.handleLogin(login, connection);
-            case RoundFinished roundFinished -> this.handleRoundFinished(roundFinished, connection);
+            case RoundFinished roundFinished -> this.handleRoundFinished(connection);
             case Network.Packets.Upstream.AbilityUsed abilityUsed -> this.handleAbilityUsed(abilityUsed, connection);
             case Heartbeat _ -> {}
             case Error error -> this.handleError(error, connection);
@@ -153,7 +154,6 @@ public class Server {
         } catch (SQLException | IOException e) {
             this.logger.ferror("Couldn't send all abilities to %s because of \"%s\"", connection, e.getMessage());
             connection.markForDeletion();
-            return;
         }
 
     }
@@ -185,6 +185,7 @@ public class Server {
                 connection.markForDeletion();
                 return;
             }
+
             if (usedAbility.cost > ((game.player1.id == player.id) ? game.player1MP : game.player2MP)) {
                 this.logger.error("Player tried using an ability that is too expensive");
                 return;
@@ -192,11 +193,10 @@ public class Server {
             this.db.abilityUsed(usedAbility, player, game);
             this.logger.info("Player used ability " + usedAbility.name + " successfully.");
         } catch (SQLException e) {
-            e.printStackTrace();
             this.logger.ferror("couldn't handle Ability used due to \"%s\"", e.getMessage());
         }
     }
-    private void handleRoundFinished(RoundFinished roundFinished, Connection connection) {
+    private void handleRoundFinished(Connection connection) {
         Player player = connection.player;
         if (player == null) {
             this.logger.error("Player trying to finish round while not being logged in");
@@ -229,7 +229,9 @@ public class Server {
             for (AbilityUsed ability: activeAbilities) {
                 Queue<Effect> activeEffects = ability.activeEffects(game);
                 while (!activeEffects.isEmpty()) {
-                    this.applyEffect(game, activeEffects.front(), ability.player1);
+                    Effect effect = activeEffects.front();
+                    float actualValue = ability.value * (effect.max - effect.min) + effect.min;
+                    this.applyEffect(game, effect, ability.player1, actualValue);
                     activeEffects.dequeue();
                 }
             }
@@ -238,7 +240,7 @@ public class Server {
             this.logger.ferror("Couldn't finish round due to \"%s\"", e.getMessage());
         }
     }
-    private void applyEffect(Game game, Effect effect, boolean player1) {
+    private void applyEffect(Game game, Effect effect, boolean player1, float value) {
         // if player one used the ability that created the effect, and it hit himself, or
         // it was player 2 who used the ability, and it isn't an effect that hit the user,
         // it needs to be applied to player 1.
@@ -246,16 +248,16 @@ public class Server {
             if (effect.relative) {
                 switch (effect.valueEffected) {
                     case 0: // HP
-                        game.player1HP -= game.player1HP * effect.value();
+                        game.player1HP -= game.player1HP * value;
                         break;
                     case 1: // HP-regen
-                        game.player1HPRegen -= game.player1HPRegen * effect.value();
+                        game.player1HPRegen -= game.player1HPRegen * value;
                         break;
                     case 2: // MP
-                        game.player1MP -= game.player1MP * effect.value();
+                        game.player1MP -= game.player1MP * value;
                         break;
                     case 3: // MP-regen
-                        game.player1MPRegen -= game.player1MPRegen * effect.value();
+                        game.player1MPRegen -= game.player1MPRegen * value;
                         break;
                     default:
                         logger.ferror("Unknown affected value %d", effect.valueEffected);
@@ -264,16 +266,16 @@ public class Server {
             } else {
                 switch (effect.valueEffected) {
                     case 0: // HP
-                        game.player1HP -= effect.value();
+                        game.player1HP -= value;
                         break;
                     case 1: // HP-regen
-                        game.player1HPRegen -= effect.value();
+                        game.player1HPRegen -= value;
                         break;
                     case 2: // MP
-                        game.player1MP -= effect.value();
+                        game.player1MP -= value;
                         break;
                     case 3: // MP-regen
-                        game.player1MPRegen -= effect.value();
+                        game.player1MPRegen -= value;
                         break;
                     default:
                         logger.ferror("Unknown affected value %d", effect.valueEffected);
@@ -284,16 +286,16 @@ public class Server {
             if (effect.relative) {
                 switch (effect.valueEffected) {
                     case 0: // HP
-                        game.player2HP -= game.player2HP * effect.value();
+                        game.player2HP -= game.player2HP * value;
                         break;
                     case 1: // HP-regen
-                        game.player2HPRegen -= game.player2HPRegen * effect.value();
+                        game.player2HPRegen -= game.player2HPRegen * value;
                         break;
                     case 2: // MP
-                        game.player2MP -= game.player2MP * effect.value();
+                        game.player2MP -= game.player2MP * value;
                         break;
                     case 3: // MP-regen
-                        game.player2MPRegen -= game.player2MPRegen * effect.value();
+                        game.player2MPRegen -= game.player2MPRegen * value;
                         break;
                     default:
                         logger.ferror("Unknown affected value %d", effect.valueEffected);
@@ -302,16 +304,16 @@ public class Server {
             } else {
                 switch (effect.valueEffected) {
                     case 0: // HP
-                        game.player2HP -= effect.value();
+                        game.player2HP -= value;
                         break;
                     case 1: // HP-regen
-                        game.player2HPRegen -= effect.value();
+                        game.player2HPRegen -= value;
                         break;
                     case 2: // MP
-                        game.player2MP -= effect.value();
+                        game.player2MP -= value;
                         break;
                     case 3: // MP-regen
-                        game.player2MPRegen -= effect.value();
+                        game.player2MPRegen -= value;
                         break;
                     default:
                         logger.ferror("Unknown affected value %d", effect.valueEffected);
@@ -367,24 +369,26 @@ public class Server {
         boolean isPlayer1 = game.player1.id == player.id;
 
         game.abilitiesUsed.toFirst();
-        List<Ability> otherUsedAbilities = new List<>();
+        List<AbilityUsed> otherUsedAbilities = new List<>();
         int count = 0;
         while (game.abilitiesUsed.hasAccess()) {
             Database.Types.AbilityUsed abilityUsed = game.abilitiesUsed.getContent();
             if (abilityUsed.round == game.round && abilityUsed.player1 != isPlayer1) {
-                otherUsedAbilities.append(abilityUsed.ability);
+                otherUsedAbilities.append(abilityUsed);
                 count++;
             }
             game.abilitiesUsed.next();
         }
-        int[] abilityIds = new int[count];
+
+        Network.Packets.Fields.AbilityUsed[] usedAbilities = new Network.Packets.Fields.AbilityUsed[count];
         otherUsedAbilities.toFirst();
-        for (int i = 0; i < abilityIds.length; i++) {
-            abilityIds[i] = otherUsedAbilities.getContent().id;
+        for (int i = 0; i < usedAbilities.length; i++) {
+            AbilityUsed abilityUsed = otherUsedAbilities.getContent();
+            usedAbilities[i] = new Network.Packets.Fields.AbilityUsed(abilityUsed.ability.id, abilityUsed.value);
             otherUsedAbilities.next();
         }
         try {
-            connection.send(new RoundEnd(abilityIds));
+            connection.send(new RoundEnd(new ArrayField<>(usedAbilities)));
         } catch (IOException e) {
             this.logger.ferror("Couldn't send RoundEnd to %s because of \"%s\"", connection, e.getMessage());
             connection.markForDeletion();

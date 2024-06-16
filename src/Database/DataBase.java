@@ -24,7 +24,7 @@ public class DataBase {
         this.connection.prepareStatement("getRunningGamesForPlayer", "SELECT game.* FROM player, game WHERE (game.player1ID=player.id OR game.player2ID=player.id) AND player.id=? AND game.finished=FALSE;");
         this.connection.prepareStatement("newGame", "INSERT INTO game VALUES (DEFAULT, DEFAULT, ?, ?, ?, ?, ?, DEFAULT, ?, ?, ?, ?, ?, DEFAULT, DEFAULT, DEFAULT);");
         this.connection.prepareStatement("getLastInsertedGame", "SELECT * FROM game WHERE id=(SELECT MAX(id) FROM game)");
-        this.connection.prepareStatement("abilityUsed", "INSERT INTO abilitiesUsed VALUES (DEFAULT, ?, ?, ?, ?);");
+        this.connection.prepareStatement("abilityUsed", "INSERT INTO abilitiesUsed VALUES (DEFAULT, ?, ?, ?, ?, ?);");
         this.connection.prepareStatement("getLastAbilityUsed", "SELECT * FROM abilitiesUsed WHERE id=(SELECT MAX(id) FROM abilitiesUsed)");
         this.connection.prepareStatement("newRound", "UPDATE game SET round = round + 1 WHERE id=?;");
         this.connection.prepareStatement("player1finishedRound", "UPDATE game SET player1FinishedTurns = round WHERE id=?");
@@ -133,7 +133,7 @@ public class DataBase {
     }
     public void abilityUsed(Ability ability, Player player, Game game) throws SQLException {
         boolean player1 = player.id == game.player1ID;
-        this.connection.runPreparedStatement("abilityUsed", game.id, ability.id, game.round, player1);
+        this.connection.runPreparedStatement("abilityUsed", game.id, ability.id, game.round, player1, Math.random());
         QueryResult queryResult = this.connection.runPreparedStatement("getLastAbilityUsed");
         String[][] data = queryResult.getData();
         if (data.length != 1) {
