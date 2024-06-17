@@ -102,7 +102,7 @@ public class Server {
             this.logger.info("Player + \"" + player.name + "\" now waiting for a game.");
             postLogin(connection);
         } catch (SQLException e) {
-            String msg = String.format("Registration failed on connection %s with username \"%s\" because of \"%s\"", connection, packet.username.value, e.getMessage());
+            String msg = String.format("Registration failed on connection %s with username \"%s\" because of \"%s\"", connection, packet.username.value, e);
             this.logger.error(msg);
             connection.markForDeletion();
         }
@@ -127,7 +127,7 @@ public class Server {
             }
         } catch (SQLException | IOException e) {
             connection.markForDeletion();
-            String msg = String.format("Login failed on connection %s with username \"%s\" because of \"%s\"", connection, packet.username, e.getMessage());
+            String msg = String.format("Login failed on connection %s with username \"%s\" because of \"%s\"", connection, packet.username, e);
             logger.error(msg);
         }
     }
@@ -141,7 +141,7 @@ public class Server {
             }
             connection.send(new Effects(new ArrayField<>(fields)));
         } catch (SQLException | IOException e) {
-            this.logger.ferror("Couldn't send all effects to %s because of \"%s\"", connection, e.getMessage());
+            this.logger.ferror("Couldn't send all effects to %s because of \"%s\"", connection, e);
             connection.markForDeletion();
             return;
         }
@@ -158,7 +158,7 @@ public class Server {
             }
             connection.send(new Abilities(new ArrayField<>(fields)));
         } catch (SQLException | IOException e) {
-            this.logger.ferror("Couldn't send all abilities to %s because of \"%s\"", connection, e.getMessage());
+            this.logger.ferror("Couldn't send all abilities to %s because of \"%s\"", connection, e);
             connection.markForDeletion();
         }
 
@@ -199,7 +199,7 @@ public class Server {
             this.db.abilityUsed(usedAbility, player, game);
             this.logger.info("Player used ability " + usedAbility.name + " successfully.");
         } catch (SQLException e) {
-            this.logger.ferror("couldn't handle Ability used due to \"%s\"", e.getMessage());
+            this.logger.ferror("couldn't handle Ability used due to \"%s\"", e);
         }
     }
     private void handleRoundFinished(Connection connection) {
@@ -218,7 +218,7 @@ public class Server {
         try {
             this.db.playerFinishedRound(player);
         } catch (SQLException e) {
-            String msg = String.format("Couldn't finish round for player \"%s\", because of \"%s\"", player.name, e.getMessage());
+            String msg = String.format("Couldn't finish round for player \"%s\", because of \"%s\"", player.name, e);
             this.logger.error(msg);
             connection.markForDeletion();
         }
@@ -243,7 +243,7 @@ public class Server {
             }
             this.db.updateDB(game);
         } catch (SQLException e) {
-            this.logger.ferror("Couldn't finish round due to \"%s\"", e.getMessage());
+            this.logger.ferror("Couldn't finish round due to \"%s\"", e);
         }
     }
     private void applyEffect(Game game, Effect effect, boolean player1, float value) {
@@ -344,7 +344,7 @@ public class Server {
             try {
                 connection.player = connection.player.getUpdated(this.db);
             } catch (SQLException e) {
-                this.logger.ferror("Couldn't update player on connection \"%s\" because of \"%s\"", connection, e.getMessage());
+                this.logger.ferror("Couldn't update player on connection \"%s\" because of \"%s\"", connection, e);
             }
             Player player = connection.player;
             if (player.currentGame == null) {
@@ -354,7 +354,7 @@ public class Server {
             try {
                 player.currentGame = player.currentGame.getUpdated(this.db);
             } catch (SQLException e) {
-                this.logger.ferror("Couldn't update player's current game because of \"%s\"", e.getMessage());
+                this.logger.ferror("Couldn't update player's current game because of \"%s\"", e);
             }
             Game game = player.currentGame;
             if (game.roundFinished()) {
@@ -366,7 +366,7 @@ public class Server {
                     player.currentGame = null;
                     this.availablePlayers.enqueue(connection);
                 } catch (IOException e) {
-                    this.logger.ferror("Unable to send GameEnd to %s due to \"%s\"", connection, e.getMessage());
+                    this.logger.ferror("Unable to send GameEnd to %s due to \"%s\"", connection, e);
                 }
             }
         }
@@ -396,7 +396,7 @@ public class Server {
         try {
             connection.send(new RoundEnd(new ArrayField<>(usedAbilities)));
         } catch (IOException e) {
-            this.logger.ferror("Couldn't send RoundEnd to %s because of \"%s\"", connection, e.getMessage());
+            this.logger.ferror("Couldn't send RoundEnd to %s because of \"%s\"", connection, e);
             connection.markForDeletion();
         }
     }
@@ -432,7 +432,7 @@ public class Server {
                 if (game == null)
                     throw new SQLException("Game returned null");
             } catch (SQLException e) {
-                String msg = String.format("Couldn't pair player \"%s\" to player \"%s\" because of SQLException \"%s\".", player1.name, player2.name, e.getMessage());
+                String msg = String.format("Couldn't pair player \"%s\" to player \"%s\" because of SQLException \"%s\".", player1.name, player2.name, e);
                 this.logger.error(msg);
                 connection1.markForDeletion();
                 connection2.markForDeletion();
@@ -446,7 +446,7 @@ public class Server {
                 String msg = String.format("Player \"%s\" now playing against \"%s\".", player1.name, player2.name);
                 this.logger.info(msg);
             } catch (IOException e) {
-                String msg = String.format("Couldn't pair player \"%s\" to player \"%s\" because of IOException \"%s\".", player1.name, player2.name, e.getMessage());
+                String msg = String.format("Couldn't pair player \"%s\" to player \"%s\" because of IOException \"%s\".", player1.name, player2.name, e);
                 this.logger.error(msg);
                 connection1.markForDeletion();
                 connection2.markForDeletion();
@@ -501,13 +501,14 @@ public class Server {
         try {
             runningGames = this.db.getRunningGames();
         } catch (SQLException e) {
-            this.logger.ferror("Couldn't get running games because of \"%s\"", e.getMessage());
+            this.logger.ferror("Couldn't get running games because of \"%s\"", e);
             return;
         }
         for (Game game : runningGames) {
             if (game.roundFinished()) {
                 try {
                     this.db.newRound(game);
+                    this.logger.fdebug("new round in game %s", game);
                 } catch (SQLException e) {
                     this.logger.ferror("Couldn't update round of game %s", game);
                 }

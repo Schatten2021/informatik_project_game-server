@@ -29,7 +29,7 @@ public class DataBase {
         this.connection.prepareStatement("newRound", "UPDATE game SET round = round + 1 WHERE id=?;");
         this.connection.prepareStatement("player1finishedRound", "UPDATE game SET player1FinishedTurns = round WHERE id=?");
         this.connection.prepareStatement("player2finishedRound", "UPDATE game SET player2FinishedTurns = round WHERE id=?");
-        this.connection.prepareStatement("updateGame", "UPDATE game SET player1HP=?, player1HPRegen=?, player1MP=?, player1MPRegen=?, player2HP=?, player2HPRegen=?, player2MP=?, player2MPRegen=? WHERE id=?");
+        this.connection.prepareStatement("updateGame", "UPDATE game SET round=?, player1HP=?, player1HPRegen=?, player1MP=?, player1MPRegen=?, player2HP=?, player2HPRegen=?, player2MP=?, player2MPRegen=? WHERE id=?");
         this.connection.prepareStatement("gameOver", "UPDATE game SET finished=TRUE, result=? WHERE id=?");
         this.connection.prepareStatement("getAllAbilities", "SELECT * FROM abilities;");
         this.connection.prepareStatement("getAllEffects", "SELECT * FROM effects;");
@@ -116,6 +116,8 @@ public class DataBase {
         return Game.load(data[0], this);
     }
     public Game newGame(Player player1, Player player2) throws SQLException {
+        if (player1.equals(player2))
+            throw new SQLException("player1 cannot equal player2");
         this.connection.runPreparedStatement("newGame", player1.id, player1.defaultHP, player1.regenHP, player1.defaultMP, player1.regenMP, player2.id, player2.defaultHP, player2.regenHP, player2.defaultMP, player2.regenMP);
         this.connection.runPreparedStatement("inGame", true, player1.id);
         this.connection.runPreparedStatement("inGame", true, player2.id);
@@ -153,7 +155,7 @@ public class DataBase {
         game.player1MP += game.player1MPRegen;
         game.player2HP += game.player2HPRegen;
         game.player2MP += game.player2MPRegen;
-        game.round++;
+        game.round += 1;
         this.updateDB(game);
     }
     public void playerFinishedRound(Player player) throws SQLException {
@@ -191,7 +193,7 @@ public class DataBase {
             game.finished = true;
             game.result = result;
         }
-        this.connection.runPreparedStatement("updateGame", game.player1HP, game.player1HPRegen, game.player1MP, game.player1MPRegen, game.player2HP, game.player2HPRegen, game.player2MP, game.player2MPRegen, game.id);
+        this.connection.runPreparedStatement("updateGame", game.round, game.player1HP, game.player1HPRegen, game.player1MP, game.player1MPRegen, game.player2HP, game.player2HPRegen, game.player2MP, game.player2MPRegen, game.id);
         if (game.finished) {
             this.connection.runPreparedStatement("inGame", false, game.player1.id);
             this.connection.runPreparedStatement("inGame", false, game.player2.id);
