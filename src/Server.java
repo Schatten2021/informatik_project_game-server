@@ -390,7 +390,7 @@ public class Server {
         otherUsedAbilities.toFirst();
         for (int i = 0; i < usedAbilities.length; i++) {
             AbilityUsed abilityUsed = otherUsedAbilities.getContent();
-            usedAbilities[i] = new Network.Packets.Fields.AbilityUsed(abilityUsed.ability.id, abilityUsed.value);
+            usedAbilities[i] = new Network.Packets.Fields.AbilityUsed(abilityUsed.ability.id, abilityUsed.value, abilityUsed.round);
             otherUsedAbilities.next();
         }
         try {
@@ -445,21 +445,27 @@ public class Server {
                 this.sendGame(connection2, game);
                 String msg = String.format("Player \"%s\" now playing against \"%s\".", player1.name, player2.name);
                 this.logger.info(msg);
-            } catch (IOException e) {
-                String msg = String.format("Couldn't pair player \"%s\" to player \"%s\" because of IOException \"%s\".", player1.name, player2.name, e);
+            } catch (IOException | SQLException e) {
+                String msg = String.format("Couldn't pair player \"%s\" to player \"%s\" because of \"%s\".", player1.name, player2.name, e);
                 this.logger.error(msg);
                 connection1.markForDeletion();
                 connection2.markForDeletion();
             }
         }
     }
-    private void sendGame(Connection connection, Game game) throws IOException {
+    private void sendGame(Connection connection, Game game) throws IOException, SQLException {
         Player player = connection.player;
         Player other;
         if (player.id == game.player1ID) {
             other = game.player2;
         } else {
             other = game.player1;
+        }
+        AbilityUsed[] usedAbilities = this.db.getAbilitiesUsed(game);
+        Network.Packets.Fields.AbilityUsed[] fields = new Network.Packets.Fields.AbilityUsed[usedAbilities.length];
+        for (int i = 0; i < usedAbilities.length; i++) {
+            AbilityUsed ability = usedAbilities[i];
+            fields[i] = new Network.Packets.Fields.AbilityUsed(ability.ability.id, ability.value, ability.round);
         }
         connection.send(new GameStart(
                 player.defaultHP,
@@ -470,7 +476,8 @@ public class Server {
                 other.defaultHP,
                 other.regenHP,
                 other.defaultMP,
-                other.regenMP
+                other.regenMP,
+                fields
         ));
         // reset the connection.player configuration so that the "currentGame" variable points to the correct game.
         if (game.player1.id == player.id) {
