@@ -154,7 +154,7 @@ public class Server {
                 for (int j = 0; j < effectIds.length; j++) {
                     effectIds[j] = new IntegerField(a.effects[j].id);
                 }
-                fields[i] = new AbilityField(new IntegerField(a.id), new StringField(a.name), new ArrayField<>(effectIds));
+                fields[i] = new AbilityField(new IntegerField(a.id), new StringField(a.name), new FloatField(a.cost), new ArrayField<>(effectIds));
             }
             connection.send(new Abilities(new ArrayField<>(fields)));
         } catch (SQLException | IOException e) {
@@ -477,7 +477,8 @@ public class Server {
                 other.regenHP,
                 other.defaultMP,
                 other.regenMP,
-                fields
+                fields,
+                game.round
         ));
         // reset the connection.player configuration so that the "currentGame" variable points to the correct game.
         if (game.player1.id == player.id) {
