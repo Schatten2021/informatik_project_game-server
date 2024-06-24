@@ -21,6 +21,7 @@ import Network.Packets.Upstream.RoundFinished;
 import Network.Packets.Upstream.SignUP;
 import logging.Logger;
 
+@SuppressWarnings("unused")
 public class Server {
     private final Network.ConnectionHost connectionHost;
     private final DataBase db;
@@ -379,7 +380,7 @@ public class Server {
         int count = 0;
         while (game.abilitiesUsed.hasAccess()) {
             Database.Types.AbilityUsed abilityUsed = game.abilitiesUsed.getContent();
-            if (abilityUsed.round == game.round && abilityUsed.player1 != isPlayer1) {
+            if (abilityUsed.round == game.round) {
                 otherUsedAbilities.append(abilityUsed);
                 count++;
             }
@@ -390,7 +391,7 @@ public class Server {
         otherUsedAbilities.toFirst();
         for (int i = 0; i < usedAbilities.length; i++) {
             AbilityUsed abilityUsed = otherUsedAbilities.getContent();
-            usedAbilities[i] = new Network.Packets.Fields.AbilityUsed(abilityUsed.ability.id, abilityUsed.value, abilityUsed.round);
+            usedAbilities[i] = new Network.Packets.Fields.AbilityUsed(abilityUsed.ability.id, abilityUsed.value, abilityUsed.round, abilityUsed.player1 != isPlayer1);
             otherUsedAbilities.next();
         }
         try {
@@ -456,7 +457,8 @@ public class Server {
     private void sendGame(Connection connection, Game game) throws IOException, SQLException {
         Player player = connection.player;
         Player other;
-        if (player.id == game.player1ID) {
+        boolean isPlayer1 = player.id == game.player1ID;
+        if (isPlayer1) {
             other = game.player2;
         } else {
             other = game.player1;
@@ -465,7 +467,7 @@ public class Server {
         Network.Packets.Fields.AbilityUsed[] fields = new Network.Packets.Fields.AbilityUsed[usedAbilities.length];
         for (int i = 0; i < usedAbilities.length; i++) {
             AbilityUsed ability = usedAbilities[i];
-            fields[i] = new Network.Packets.Fields.AbilityUsed(ability.ability.id, ability.value, ability.round);
+            fields[i] = new Network.Packets.Fields.AbilityUsed(ability.ability.id, ability.value, ability.round, isPlayer1 != ability.player1);
         }
         connection.send(new GameStart(
                 player.defaultHP,
