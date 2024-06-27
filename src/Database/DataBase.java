@@ -155,6 +155,10 @@ public class DataBase {
         game.player1MP += game.player1MPRegen;
         game.player2HP += game.player2HPRegen;
         game.player2MP += game.player2MPRegen;
+        game.player1HPRegen = game.player1.regenHP;
+        game.player1MPRegen = game.player1.regenMP;
+        game.player2HPRegen = game.player2.regenHP;
+        game.player2MPRegen = game.player2.regenMP;
         game.round += 1;
         this.updateDB(game);
     }
